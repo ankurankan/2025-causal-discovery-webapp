@@ -1,3 +1,10 @@
+var CI = require('./ci_test');
+
+// expose to window so your DAGitty code can call them:
+window.pillai_test    = CI.pillai_test;
+window.computeEffects = CI.compute_effects;
+
+
 function getEdgeDOM( u , v, dir ){ let ekv = DAGitty.controllers[0].getView().edge_shapes.kv
 	let eid = `${u}\u0000${v}\u0000${dir}`
 	if( ekv[eid] ) {

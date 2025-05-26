@@ -4,16 +4,28 @@
   "description": "",
   "main": "cancor.js",
   "scripts": {
+    "build": "webpack",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "danfojs": "^1.2.0",
     "danfojs-node": "^1.2.0",
     "jstat": "^1.9.6",
     "ml-matrix": "^6.12.1",
     "ml-random-forest": "^2.1.0",
     "vite": "^6.3.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.27.1",
+    "@babel/preset-env": "^7.27.2",
+    "babel-loader": "^10.0.0",
+    "babelify": "^10.0.0",
+    "browserify": "^17.0.1",
+    "crypto-browserify": "^3.12.1",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
   }
 }
