@@ -39,3 +39,6 @@ function centerMatrix(M) {
     return M.subRowVector(colMeans);
 }
 
+module.exports = {
+  canonicalCorrelations
+};
