@@ -1,132 +1,125 @@
-const { RandomForestRegression } = require('ml-random-forest');
-const dfd = require('danfojs-node');
-const { Matrix } = require('ml-matrix');
-const { canonicalCorrelations } = require('./cancor');
-const jStat = require('jstat');
+// ci_test.js
+var RF = require('ml-random-forest').RandomForestRegression;
+var dfd = require('danfojs-node');
+var Matrix = require('ml-matrix').Matrix;
+var canonicalCorrelations = require('./cancor').canonicalCorrelations;
+var jStat = require('jstat');
 
 /**
- * Computes residuals from two random forest models:
- * - Model 1: Predict X from Z
- * - Model 2: Predict Y from Z
- *
- * @param {string} X - Target variable 1
- * @param {string} Y - Target variable 2
- * @param {string[]} Z - List of feature column names
- * @param {dfd.DataFrame} df - Danfo.js DataFrame
- * @returns {{ residualsX: number[], residualsY: number[] }}
+ * Fit RFs, compute residuals, canonical corrs, Pillai effect & p-value.
+ * @return {object} { effectSize: number, pValue: number }
  */
 function pillai_test(X, Y, Z, df) {
-  // Extract feature matrix Z and targets X, Y
-  // const X_vals = df.column(X).values;
-  // const Y_vals = df.column(Y).values;
-  // const Z_vals = df.loc({ columns: Z }).values.map(row => Array.from(row));
+  var n = df.shape[0];
+  var X_vals = new Array(n);
+  var Y_vals = new Array(n);
+  var Z_vals = new Array(n);
 
-  const numRows = df.shape[0];
-  const X_vals = new Array(numRows);
-  const Y_vals = new Array(numRows);
-  const Z_vals = new Array(numRows);
-
-  for (let i = 0; i < numRows; i++) {
-    const row = df.iloc({ rows: [i] }).values[0];
+  // 1) extract
+  for (var i = 0; i < n; i++) {
+    var row = df.iloc({ rows: [i] }).values[0];
     X_vals[i] = row[0];
     Y_vals[i] = row[1];
-    Z_vals[i] = row.slice(2, row.length);
+    // slice from column-2 onward, force to plain array
+    Z_vals[i] = Array.prototype.slice.call(row, 2);
   }
 
-  // Train model for X ~ Z
-  const modelX = new RandomForestRegression({
+  // 2) train RF X ~ Z
+  var modelX = new RF({
     nEstimators: 100,
     maxFeatures: 0.8,
     replacement: true,
-    seed: 42,
+    seed: 42
   });
   modelX.train(Z_vals, X_vals);
-  const X_preds = modelX.predict(Z_vals);
+  var X_pred = modelX.predict(Z_vals);
 
-  // Train model for Y ~ Z
-  const modelY = new RandomForestRegression({
+  // 3) train RF Y ~ Z
+  var modelY = new RF({
     nEstimators: 100,
     maxFeatures: 0.8,
     replacement: true,
-    seed: 42,
+    seed: 42
   });
   modelY.train(Z_vals, Y_vals);
-  const Y_preds = modelY.predict(Z_vals);
+  var Y_pred = modelY.predict(Z_vals);
 
-  // Compute residuals
-  const residualsX = X_vals.map((trueVal, i) => trueVal - X_preds[i]);
-  const residualsY = Y_vals.map((trueVal, i) => trueVal - Y_preds[i]);
+  // 4) residuals
+  var resX = X_vals.map(function(v,i){ return v - X_pred[i]; });
+  var resY = Y_vals.map(function(v,i){ return v - Y_pred[i]; });
 
-  const resXMat = new Matrix(residualsX.map(val => [val]));
-  const resYMat = new Matrix(residualsY.map(val => [val]));
+  // 5) canonical correlations
+  var matX = new Matrix(resX.map(function(v){ return [v]; }));
+  var matY = new Matrix(resY.map(function(v){ return [v]; }));
+  var ccs  = canonicalCorrelations(matX, matY);
 
-  const canonicalCorrs = canonicalCorrelations(resXMat, resYMat);
+  // 6) Pillai statistic → F → p-value
+  var coef = ccs.reduce(function(s,r){ return s + r*r; }, 0);
+  var a    = matX.columns;
+  var b    = matY.columns;
+  var smin = Math.min(a,b);
+  var df1  = a * b;
+  var df2  = smin * (n - 1 + smin - a - b);
+  var fstat = (coef/df1) * (df2/(smin - coef));
+  var pval  = 1 - jStat.centralF.cdf(fstat, df1, df2);
 
-  const coef = canonicalCorrs.reduce((sum, r) => sum + r * r, 0);
-
-  const a   = resXMat.columns;
-  const b   = resYMat.columns;
-  const s   = Math.min(a, b);
-  const df1 = a * b;
-  const df2 = s * (numRows - 1 + s - a - b);
-
-  // F-statistic
-  const fStat = (coef / df1) * (df2 / (s - coef));
-
-  // p-value = 1 − F_CDF(fStat; df1, df2)
-  return (1 - jStat.centralF.cdf(fStat, df1, df2));
+  return {
+    effectSize: coef,
+    pValue: pval
+  };
 }
 
+
 /**
- * @param {Object} dag            – graph object with getNodes(), getParents()
- * @param {dfd.DataFrame} df      – your data
- * @returns {dfd.DataFrame}       – columns: X, A, Y, cor, p
+ * Replicate your R compute_effects_v2, but returning a JS array of results.
+ * @returns [{X, A, Y, cor, p}, …]
  */
 function compute_effects(dag, df) {
-  const nodes = dag.getVertices();
-  const results = [];
+  var verts = dag.getVertices();
+  var out = [];
 
-  // all pairs i<j
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const n1 = nodes[i];
-      const n2 = nodes[j];
+  for (var i = 0; i < verts.length; i++) {
+    for (var j = i + 1; j < verts.length; j++) {
+      var n1 = verts[i], n2 = verts[j];
+      var p1 = dag.getParents(n1);
+      var p2 = dag.getParents(n2);
+      var other, u, v, arrow;
 
-      const p1 = dag.getParents(n1);
-      const p2 = dag.getParents(n2);
-
-      let otherParents, u, v, a;
-
-      // direction n2 -> n1
-      if (p1.includes(n2)) {
-        otherParents = p1.filter(p => p !== n2);
-        u = n2; v = n1; a = '->';
+      if (p1.indexOf(n2) !== -1) {
+        other = p1.filter(function(x){ return x !== n2; });
+        u = n2; v = n1; arrow = '->';
       }
-      // direction n1 -> n2
-      else if (p2.includes(n1)) {
-        otherParents = p2.filter(p => p !== n1);
-        u = n1; v = n2; a = '->';
+      else if (p2.indexOf(n1) !== -1) {
+        other = p2.filter(function(x){ return x !== n1; });
+        u = n1; v = n2; arrow = '->';
       }
-
-      // no edge in either direction
       else {
-        otherParents = Array.from(new Set([...p1, ...p2]));
-        u = n1; v = n2; a = '--';
+        // union of p1 and p2
+        other = p1.slice();
+        p2.forEach(function(x){
+          if (other.indexOf(x) === -1) { other.push(x); }
+        });
+        u = n1; v = n2; arrow = '--';
       }
 
-      // run the Pillai-based CI test
-      effect_size, p_value = pillai_test(u, v, otherParents, df);
+      // call our Pillai test
+      var res = pillai_test(u, v, other, df);
 
-      // build ml-matrix objects for p-value
-      const resXMat = Matrix.columnVector(residualsX);
-      const resYMat = Matrix.columnVector(residualsY);
+      out.push({
+        X: u,
+        A: arrow,
+        Y: v,
+        cor: res.effectSize,
+        p:   res.pValue
+      });
+    }
+  }
 
-      // compute p-value
-      const p = pillaiPValue(
-        canonicalCorrs,
-        resXMat,
-        resYMat,
-        df.shape[0]
-      );
+  return out;
+}
 
-module.exports = { pillai_test, compute_effects };
+
+module.exports = {
+  pillai_test:    pillai_test,
+  compute_effects: compute_effects
+};
