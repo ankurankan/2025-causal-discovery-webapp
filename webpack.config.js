@@ -5,9 +5,9 @@ module.exports = {
   mode: 'production',
   entry: './utils.js',
   output: {
-    filename:   'bundle.js',
-    path:       path.resolve(__dirname, 'dist'),
-    library:    'MyDAGUtils',
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, 'dist'),
+    library: 'MyDAGUtils',
     libraryTarget: 'var'
   },
   resolve: {
@@ -15,17 +15,12 @@ module.exports = {
       'danfojs-node': 'danfojs'
     },
     fallback: {
-      // tell Webpack: if a module does `require('crypto')`,
-      // use the crypto-browserify package instead
       crypto: require.resolve('crypto-browserify'),
-      // if you installed more polyfills, add them here:
-      // stream:  require.resolve('stream-browserify'),
-      // buffer:  require.resolve('buffer/'),
-      // process: require.resolve('process/browser'),
-      // util:    require.resolve('util/'),
-      // assert:  require.resolve('assert/'),
-      // events:  require.resolve('events/')
-    },
+      stream: require.resolve('stream-browserify'),
+      buffer: require.resolve('buffer/'),
+      process: require.resolve('process/browser'),
+      vm: require.resolve('vm-browserify') 
+    }
   },
   module: {
     rules: [
@@ -40,8 +35,15 @@ module.exports = {
     ]
   },
   plugins: [
+    // Ignore big TF/plotly/xlsx deps you don’t need
     new webpack.IgnorePlugin({ resourceRegExp: /^@tensorflow\/tfjs/ }),
     new webpack.IgnorePlugin({ resourceRegExp: /^plotly\.js-dist-min$/ }),
-    new webpack.IgnorePlugin({ resourceRegExp: /^xlsx$/ })
+    new webpack.IgnorePlugin({ resourceRegExp: /^xlsx$/ }),
+
+    // Inject Buffer and process so crypto-browserify & friends work
+    new webpack.ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+      process: 'process/browser'
+    })
   ]
 };

@@ -1,0 +1,7 @@
+To build bundle:
+
+```bash
+npm run build
+```
+
+This will generate a file `bundle.js` in the `dist` directory.
