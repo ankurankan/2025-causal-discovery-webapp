@@ -1,8 +1,10 @@
 const path    = require('path');
 const webpack = require('webpack');
 
+
 module.exports = {
-  mode: 'production',
+  mode: 'development',
+  target: 'web',
   entry: './utils.js',
   output: {
     filename: 'bundle.js',

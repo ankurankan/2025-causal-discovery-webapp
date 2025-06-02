@@ -1,16 +1,23 @@
-var CI = require('./ci_test');
+const dfd_readcsv = require('danfojs').readCSV;
+const CI = require('./ci_test');
 
 // expose to window so your DAGitty code can call them:
+// window.setup = setup;
+window.uploadFile = uploadFile;
+window.send = send;
 window.pillai_test    = CI.pillai_test;
-window.computeEffects = CI.compute_effects;
+window.compute_effects = CI.compute_effects;
+
+let data = null;
 
 
-function getEdgeDOM( u , v, dir ){ let ekv = DAGitty.controllers[0].getView().edge_shapes.kv
-	let eid = `${u}\u0000${v}\u0000${dir}`
+function getEdgeDOM( u , v, dir ){
+	let ekv = DAGitty.controllers[0].getView().edge_shapes.kv;
+	let eid = `${u.id}\u0000${v.id}\u0000${dir}`;
 	if( ekv[eid] ) {
-		return ekv[eid].dom.firstChild
+		return ekv[eid].dom.firstChild;
 	} else {
-		return null
+		return null;
 	}
 }
 
@@ -30,53 +37,85 @@ function dagOnly(){
 	return g2
 }
 
+// async function uploadFile() {
+//         const fileInput = document.getElementById('fileInput');
+//         const file = fileInput.files[0];
+// 
+//         if (!file) {
+//         	alert("Please select a file.");
+//         	return;
+//         }
+// 
+//         const formData = new FormData();
+//         formData.append('file', file);
+// 
+// 	let result;
+// 	try{
+//         	const response = await fetch('http://127.0.0.1:8000/upload', {
+//                 	method: 'POST',
+//                 	body: formData
+// 		});
+// 		result = await response.json();
+// 	} catch(error){
+//         	console.error('Error:', error);
+//         	alert('File upload failed');
+//         }
+// 
+// 	// Create an empty DAG with the variables.
+// 	const graph = document.getElementById('dagitty_graph');
+// 	graph.innerHTML = "dag{ " + JSON.parse(result.body[0])['var_names'].join(" ") + " }";
+// 	DAGitty.setup();
+// 	DAGitty.controllers[0].event_listeners["graphchange"][0] = send;
+// 	send();
+// }
+
 async function uploadFile() {
-        const fileInput = document.getElementById('fileInput');
-        const file = fileInput.files[0];
+  const fileInput = document.getElementById('fileInput');
+  const file = fileInput.files[0];
+  if (!file) {
+    alert("Please select a CSV file first.");
+    return;
+  }
 
-        if (!file) {
-        	alert("Please select a file.");
-        	return;
-        }
+  try {
+    const df = await dfd_readcsv(file);
 
-        const formData = new FormData();
-        formData.append('file', file);
+    data = df;
 
-	let result;
-	try{
-        	const response = await fetch('http://127.0.0.1:8000/upload', {
-                	method: 'POST',
-                	body: formData
-		});
-		result = await response.json();
-	} catch(error){
-        	console.error('Error:', error);
-        	alert('File upload failed');
-        }
+    const varNames = df.columns;
+    const graph = document.getElementById('dagitty_graph');
+    graph.innerHTML = "dag{ " + varNames.join(" ") + " }";
+    DAGitty.setup();
 
-	// Create an empty DAG with the variables.
-	const graph = document.getElementById('dagitty_graph');
-	graph.innerHTML = "dag{ " + JSON.parse(result.body[0])['var_names'].join(" ") + " }";
-	DAGitty.setup();
-	DAGitty.controllers[0].event_listeners["graphchange"][0] = send;
-	send();
+    DAGitty.controllers[0].event_listeners["graphchange"][0] = send;
+    send();
+  }
+  catch (err) {
+    console.error("Error parsing CSV into DataFrame:", err);
+    alert("Could not parse CSV. Make sure it's a well‐formed file.");
+  }
 }
+
 
 async function send(){
 	let g  = DAGitty.controllers[0].graph
 	DAGitty.controllers[0].event_listeners["graphchange"] = []
+
 	// remove all undirected edges
 	g = dagOnly(g)
+
 	// send DAG to backend for testing
-	const a = await fetch('http://127.0.0.1:8000/getassoc?dag='+encodeURIComponent(g.toString())+'&threshold='+document.getElementById('thres_txt').value+'&pval='+document.getElementById('pval_txt').value)
-	const b = await a.json()
+	// const a = await fetch('http://127.0.0.1:8000/getassoc?dag='+encodeURIComponent(g.toString())+'&threshold='+document.getElementById('thres_txt').value+'&pval='+document.getElementById('pval_txt').value)
+	// const b = await a.json()
+	//
 
-	const fisher = await fetch('http://127.0.0.1:8000/rmsea?dag='+encodeURIComponent(g.toString()))
-	const pval = await fisher.json()
-	document.getElementById('fisherc').innerHTML = pval;
+	// const fisher = await fetch('http://127.0.0.1:8000/rmsea?dag='+encodeURIComponent(g.toString()))
+	// const pval = await fisher.json()
+	// document.getElementById('fisherc').innerHTML = 0;
 
-	if( Array.isArray(b) ){
-		for( let e of b ){
+	effects = compute_effects( g, data);
+	if( Array.isArray(effects) ){
+		for( let e of effects ){
 			e.edge = e.A == "->"
 			if( !e.edge ){
 				g.addEdge( e.X, e.Y, Graph.Edgetype.Undirected )
@@ -88,7 +127,7 @@ async function send(){
 	DAGitty.controllers[0].setGraph( g )
 	DAGitty.controllers[0].redraw() // creates new edge shapes*/
 	//return
-	for( let e of b ){
+	for( let e of effects ){
 		let edom = getEdgeDOM( e.X, e.Y, 0+e.edge )
 		if( !edom && e.edge ){
 			edom = getEdgeDOM( e.v, e.u, 0+e.edge )
@@ -108,9 +147,9 @@ async function send(){
 	DAGitty.controllers[0].event_listeners["graphchange"][0] = send
 }
 
-function setup(){
-	DAGitty.setup()
-	DAGitty.controllers[0].event_listeners["graphchange"][0] = send
-	// send()
-}
+// function setup(){
+// 	// DAGitty.setup()
+// 	// DAGitty.controllers[0].event_listeners["graphchange"][0] = send
+// 	// send()
+// }
 

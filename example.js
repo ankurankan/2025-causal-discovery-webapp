@@ -1,4 +1,4 @@
-const dfd = require('danfojs-node');
+const dfd_frame = require('danfojs-node').DataFrame;
 const { pillai_test } = require('./ci_test');
 
 // const df = new dfd.DataFrame([
@@ -8,7 +8,7 @@ const { pillai_test } = require('./ci_test');
 //   { X: 13, Y: 6, Z1: 4, Z2: 8 },
 // ]);
 
-const df = new dfd.DataFrame([
+const df = new dfd_frame([
   {'X': 73, 'Y': 80, 'Z1': 75, 'Z2': 152},
   {'X': 93, 'Y': 88, 'Z1': 93, 'Z2': 185},
   {'X': 89, 'Y': 91, 'Z1': 90, 'Z2': 180},

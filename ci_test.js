@@ -1,6 +1,6 @@
 // ci_test.js
 var RF = require('ml-random-forest').RandomForestRegression;
-var dfd = require('danfojs-node');
+// var dfd = require('danfojs-node').DataFrame;
 var Matrix = require('ml-matrix').Matrix;
 var canonicalCorrelations = require('./cancor').canonicalCorrelations;
 var jStat = require('jstat');
@@ -10,7 +10,13 @@ var jStat = require('jstat');
  * @return {object} { effectSize: number, pValue: number }
  */
 function pillai_test(X, Y, Z, df) {
-  var n = df.shape[0];
+  const n = df.shape[0];
+  const cols = df.columns;
+
+  const idxX = cols.indexOf(X.id);
+  const idxY = cols.indexOf(Y.id);
+  const idxZ = Z.map(zName => cols.indexOf(zName));
+
   var X_vals = new Array(n);
   var Y_vals = new Array(n);
   var Z_vals = new Array(n);
@@ -18,11 +24,12 @@ function pillai_test(X, Y, Z, df) {
   // 1) extract
   for (var i = 0; i < n; i++) {
     var row = df.iloc({ rows: [i] }).values[0];
-    X_vals[i] = row[0];
-    Y_vals[i] = row[1];
-    // slice from column-2 onward, force to plain array
-    Z_vals[i] = Array.prototype.slice.call(row, 2);
+    X_vals[i] = row[idxX];
+    Y_vals[i] = row[idxY];
+    Z_vals[i] = idxZ.map(zIdx => row[zIdx]);
   }
+
+  console.log(Z_vals);
 
   // 2) train RF X ~ Z
   var modelX = new RF({
@@ -70,19 +77,18 @@ function pillai_test(X, Y, Z, df) {
 }
 
 
-/**
- * Replicate your R compute_effects_v2, but returning a JS array of results.
- * @returns [{X, A, Y, cor, p}, …]
- */
 function compute_effects(dag, df) {
   var verts = dag.getVertices();
   var out = [];
 
   for (var i = 0; i < verts.length; i++) {
     for (var j = i + 1; j < verts.length; j++) {
-      var n1 = verts[i], n2 = verts[j];
-      var p1 = dag.getParents(n1);
-      var p2 = dag.getParents(n2);
+      var n1 = verts[i];
+      var n2 = verts[j];
+
+      var p1 = n1.getParents();
+      var p2 = n2.getParents();
+
       var other, u, v, arrow;
 
       if (p1.indexOf(n2) !== -1) {
