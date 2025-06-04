@@ -113,7 +113,10 @@ async function send(){
 	// const pval = await fisher.json()
 	// document.getElementById('fisherc').innerHTML = 0;
 
-	effects = compute_effects( g, data);
+	const effect_thresh = document.getElementById('thres_txt').value;
+	const pval_thresh = document.getElementById('pval_txt').value;
+
+	effects = compute_effects( g, data, pval_thresh, effect_thresh );
 	if( Array.isArray(effects) ){
 		for( let e of effects ){
 			e.edge = e.A == "->"

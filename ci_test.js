@@ -15,7 +15,7 @@ function pillai_test(X, Y, Z, df) {
 
   const idxX = cols.indexOf(X.id);
   const idxY = cols.indexOf(Y.id);
-  const idxZ = Z.map(zName => cols.indexOf(zName));
+  const idxZ = Z.map(zName => cols.indexOf(zName.id));
 
   var X_vals = new Array(n);
   var Y_vals = new Array(n);
@@ -29,8 +29,6 @@ function pillai_test(X, Y, Z, df) {
     Z_vals[i] = idxZ.map(zIdx => row[zIdx]);
   }
 
-  console.log(Z_vals);
-
   // 2) train RF X ~ Z
   var modelX = new RF({
     nEstimators: 100,
@@ -38,6 +36,7 @@ function pillai_test(X, Y, Z, df) {
     replacement: true,
     seed: 42
   });
+
   modelX.train(Z_vals, X_vals);
   var X_pred = modelX.predict(Z_vals);
 
@@ -70,6 +69,7 @@ function pillai_test(X, Y, Z, df) {
   var fstat = (coef/df1) * (df2/(smin - coef));
   var pval  = 1 - jStat.centralF.cdf(fstat, df1, df2);
 
+  console.log("X=", X.id, "Y=", Y.id, "Z=", Z.map(zName => zName.id), "coef=", coef, "pval=", pval);
   return {
     effectSize: coef,
     pValue: pval
@@ -77,7 +77,7 @@ function pillai_test(X, Y, Z, df) {
 }
 
 
-function compute_effects(dag, df) {
+function compute_effects(dag, df, pval_thresh, effect_thresh) {
   var verts = dag.getVertices();
   var out = [];
 
@@ -111,16 +111,18 @@ function compute_effects(dag, df) {
       // call our Pillai test
       var res = pillai_test(u, v, other, df);
 
-      out.push({
-        X: u,
-        A: arrow,
-        Y: v,
-        cor: res.effectSize,
-        p:   res.pValue
-      });
+      if (res.effectSize > effect_thresh && res.pValue < pval_thresh){
+      	out.push({
+        	X: u,
+        	A: arrow,
+        	Y: v,
+        	cor: res.effectSize,
+        	p:   res.pValue
+      	});
+      }
     }
   }
-
+	
   return out;
 }
 
