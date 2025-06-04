@@ -11,7 +11,7 @@ window.onVarTypeConfirmed = onVarTypeConfirmed;
 window.rmsea = CI.rmsea;
 
 let data = null;
-let varTypes = {}; // will hold { varName: "continuous" or "categorical", ... }
+let varTypes = {}; 
 
 
 function getEdgeDOM( u , v, dir ){
@@ -159,7 +159,7 @@ async function send(){
 	const effect_thresh = document.getElementById('thres_txt').value;
 	const pval_thresh = document.getElementById('pval_txt').value;
 
-	effects = compute_effects( g, data, pval_thresh, effect_thresh );
+	effects = compute_effects( g, data, pval_thresh, effect_thresh, varTypes );
 	if( Array.isArray(effects) ){
 		for( let e of effects ){
 			e.edge = e.A == "->"
