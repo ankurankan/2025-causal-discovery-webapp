@@ -41,6 +41,15 @@
 	</tr>
 </table>
 
+<div id="varTypePanel" class="center" style="margin-top: 1em; display: none;">
+  <h2>Select Each Variable’s Type</h2>
+  <form id="varTypeForm">
+    <!-- We will dynamically inject one <div> per variable here -->
+  </form>
+  <button class="buttons" onclick="onVarTypeConfirmed()">OK</button>
+</div>
+
+
 <div id=dagitty_graph class="dagitty" data-mutable="true">	
 	<p style="font-size:24px"><strong> Please select a dataset to start. </strong></p>
 </div>

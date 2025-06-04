@@ -7,8 +7,11 @@ window.uploadFile = uploadFile;
 window.send = send;
 window.pillai_test    = CI.pillai_test;
 window.compute_effects = CI.compute_effects;
+window.onVarTypeConfirmed = onVarTypeConfirmed;
+window.rmsea = CI.rmsea;
 
 let data = null;
+let varTypes = {}; // will hold { varName: "continuous" or "categorical", ... }
 
 
 function getEdgeDOM( u , v, dir ){
@@ -37,38 +40,6 @@ function dagOnly(){
 	return g2
 }
 
-// async function uploadFile() {
-//         const fileInput = document.getElementById('fileInput');
-//         const file = fileInput.files[0];
-// 
-//         if (!file) {
-//         	alert("Please select a file.");
-//         	return;
-//         }
-// 
-//         const formData = new FormData();
-//         formData.append('file', file);
-// 
-// 	let result;
-// 	try{
-//         	const response = await fetch('http://127.0.0.1:8000/upload', {
-//                 	method: 'POST',
-//                 	body: formData
-// 		});
-// 		result = await response.json();
-// 	} catch(error){
-//         	console.error('Error:', error);
-//         	alert('File upload failed');
-//         }
-// 
-// 	// Create an empty DAG with the variables.
-// 	const graph = document.getElementById('dagitty_graph');
-// 	graph.innerHTML = "dag{ " + JSON.parse(result.body[0])['var_names'].join(" ") + " }";
-// 	DAGitty.setup();
-// 	DAGitty.controllers[0].event_listeners["graphchange"][0] = send;
-// 	send();
-// }
-
 async function uploadFile() {
   const fileInput = document.getElementById('fileInput');
   const file = fileInput.files[0];
@@ -78,23 +49,95 @@ async function uploadFile() {
   }
 
   try {
+    // (1) Read CSV into a Danfo.js DataFrame
     const df = await dfd_readcsv(file);
-
     data = df;
 
+    // (2) Build the DAGitty “empty” graph just as before
     const varNames = df.columns;
     const graph = document.getElementById('dagitty_graph');
     graph.innerHTML = "dag{ " + varNames.join(" ") + " }";
     DAGitty.setup();
 
-    DAGitty.controllers[0].event_listeners["graphchange"][0] = send;
-    send();
+    // (3) Show the “Variable Type” panel (previously hidden)
+    const panel = document.getElementById('varTypePanel');
+    panel.style.display = "block";
+
+    // (4) Populate #varTypeForm with one row per variable
+    const form = document.getElementById('varTypeForm');
+    form.innerHTML = ""; // clear any old content
+
+    varTypes = {}; // reset
+
+    varNames.forEach(varName => {
+      // Create a container <div> for each variable
+      const rowDiv = document.createElement('div');
+      rowDiv.style.marginBottom = "0.5em";
+
+      //  a) label
+      const label = document.createElement('label');
+      label.textContent = varName + ": ";
+      label.setAttribute("for", "type_of_" + varName);
+      label.style.marginRight = "0.5em";
+
+      //  b) <select> element
+      const select = document.createElement('select');
+      select.id = "type_of_" + varName;
+      select.name = varName;
+
+      //  c) two <option> entries
+      const optCont = document.createElement('option');
+      optCont.value = "continuous";
+      optCont.text = "Continuous";
+      const optCat = document.createElement('option');
+      optCat.value = "categorical";
+      optCat.text = "Categorical";
+
+      select.appendChild(optCont);
+      select.appendChild(optCat);
+
+      // default selection: try an automatic guess
+      // (e.g. if the column’s dtype is “object” or string‐like, pick categorical)
+      // Danfo.js doesn’t give you dtype directly, but you can check a few rows:
+      const sampleVals = df[varName].values.slice(0, 10);
+      const allNumericSample = sampleVals.every(v => typeof v === "number");
+      select.value = allNumericSample ? "continuous" : "categorical";
+
+      // whenever user changes the dropdown, store it into varTypes:
+      select.onchange = function() {
+        varTypes[varName] = this.value;
+      };
+
+      // initialize varTypes right away:
+      varTypes[varName] = select.value;
+
+      rowDiv.appendChild(label);
+      rowDiv.appendChild(select);
+      form.appendChild(rowDiv);
+    });
+
+    // (5) Wire up graph‐change listener AFTER user confirms variable types
+    //     (we’ll do that in onVarTypeConfirmed())
   }
   catch (err) {
     console.error("Error parsing CSV into DataFrame:", err);
-    alert("Could not parse CSV. Make sure it's a well‐formed file.");
+    alert("Could not parse CSV. Make sure it’s a well‐formed file.");
   }
 }
+
+
+// Called when the user clicks “OK” under the variable‐type form:
+function onVarTypeConfirmed() {
+  // (1) Hide the “Variable Type” panel once they’ve confirmed:
+  document.getElementById('varTypePanel').style.display = "none";
+
+  // (2) Now that varTypes is filled, we can allow the DAGitty graph to “send”:
+  DAGitty.controllers[0].event_listeners["graphchange"][0] = send;
+
+  // (3) Immediately call send() once, so edges appear with the new types:
+  send();
+}
+
 
 
 async function send(){
@@ -127,6 +170,9 @@ async function send(){
 	} else {
 		return
 	}
+	const rmsea_val = rmsea( g, data);
+	document.getElementById('rmsea').innerHTML = rmsea_val.toFixed(3);
+
 	DAGitty.controllers[0].setGraph( g )
 	DAGitty.controllers[0].redraw() // creates new edge shapes*/
 	//return
@@ -149,10 +195,4 @@ async function send(){
 	}
 	DAGitty.controllers[0].event_listeners["graphchange"][0] = send
 }
-
-// function setup(){
-// 	// DAGitty.setup()
-// 	// DAGitty.controllers[0].event_listeners["graphchange"][0] = send
-// 	// send()
-// }
 

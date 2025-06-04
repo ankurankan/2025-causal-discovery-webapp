@@ -126,8 +126,75 @@ function compute_effects(dag, df, pval_thresh, effect_thresh) {
   return out;
 }
 
+function rmsea(dag, df) {
+  const vertices = dag.getVertices();
+  const nVert = vertices.length;
+  const pvalues = [];
+
+  // 3) Loop over every unordered pair (i < j)
+  for (let i = 0; i < nVert - 1; i++) {
+    for (let j = i + 1; j < nVert; j++) {
+      const vi = vertices[i];
+      const vj = vertices[j];
+      const name_i = vi.id;
+      const name_j = vj.id;
+
+      const parents_i = vi.getParents(); 
+      const parents_j = vj.getParents();
+
+      const parentNames_i = parents_i.map((p) => p.id);
+      const parentNames_j = parents_j.map((p) => p.id);
+
+      const i_in_pj = parentNames_j.indexOf(name_i) !== -1;
+      const j_in_pi = parentNames_i.indexOf(name_j) !== -1;
+
+      if (!i_in_pj && !j_in_pi) {
+        const ZbyId = {};
+        parents_i.forEach((p) => {
+          ZbyId[p.id] = p;
+        });
+        parents_j.forEach((p) => {
+          ZbyId[p.id] = p;
+        });
+        // Convert back to an array of Vertex objects
+        const Zunion = Object.values(ZbyId);
+
+        // 3c) Call your Pillai‐based CI test:
+        const res = pillai_test(vi, vj, Zunion, df);
+        const pval = Math.max(res.pValue, 1e-40);
+        pvalues.push(pval);
+      }
+    }
+  }
+
+  // 4) Now compute Fisher’s C = -2 * sum(log(p_i))
+  const m = pvalues.length;
+  if (m === 0) {
+    // If there were no non‐adjacent pairs at all (unlikely), return 0
+    return 0;
+  }
+  let sumLog = 0;
+  for (let k = 0; k < m; k++) {
+    sumLog += Math.log(pvalues[k]);
+  }
+  const fisherc = -2 * sumLog;
+
+  // 5) Compute sample size n (number of rows in df)
+  //    In Danfo.js, DataFrame.shape[0] is the row‐count.
+  const n = df.shape[0];
+
+  // 6) RMSEA = sqrt( max( C − 2*m, 0 ) / [2 * m * (n − 1)] )
+  const numerator = Math.max(fisherc - 2 * m, 0);
+  const denominator = 2 * m * (n - 1);
+  const rmseaVal = Math.sqrt(numerator / denominator);
+
+  return rmseaVal;
+}
+
+
 
 module.exports = {
+  rmsea: rmsea,
   pillai_test:    pillai_test,
   compute_effects: compute_effects
 };
