@@ -41,6 +41,21 @@
 	</tr>
 </table>
 
+<div id="legend" class="center">
+    <div class="legend-item">
+      <span class="legend-color red"></span>
+      <span>Red edge: Observed correlation not explained → please add edge.</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color black"></span>
+      <span>Black edge: Over-explained correlation → can remove edge.</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-color green"></span>
+      <span>Green edge: Current edges in the DAG.</span>
+    </div>
+</div>
+
 <div id="varTypePanel" class="center" style="margin-top: 1em; display: none;">
   <h2>Select Each Variable’s Type</h2>
   <form id="varTypeForm">
@@ -48,7 +63,6 @@
   </form>
   <button class="buttons" onclick="onVarTypeConfirmed()">OK</button>
 </div>
-
 
 <div id=dagitty_graph class="dagitty" data-mutable="true">	
 	<p style="font-size:24px"><strong> Please select a dataset to start. </strong></p>

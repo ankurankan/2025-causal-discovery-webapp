@@ -68,3 +68,33 @@ button:hover {
                 background-color: #005fb2;  
                 border-color: #005fb2;
         } 
+
+/* Legend container */
+#legend {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  font-size: 0.85rem;
+  margin: 0.5rem 0;
+}
+
+/* Each item */
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Color swatch */
+.legend-color {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  border: 1px solid #666;
+  border-radius: 2px;
+}
+
+/* Specific colors */
+.legend-color.red   { background-color: #A00; border-color: #A00; }
+.legend-color.black { background-color: #000; border-color: #000; }
+.legend-color.green { background-color: #0A0; border-color: #0A0; }
