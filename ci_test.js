@@ -59,7 +59,7 @@ function pillai_test(X, Y, Z, df) {
   var matY = new Matrix(resY.map(function(v){ return [v]; }));
   var ccs  = canonicalCorrelations(matX, matY);
 
-  // 6) Pillai statistic → F → p-value
+  // 6) Pillai statistic -> F approx -> p-value
   var coef = ccs.reduce(function(s,r){ return s + r*r; }, 0);
   var a    = matX.columns;
   var b    = matY.columns;
@@ -108,7 +108,6 @@ function compute_effects(dag, df, pval_thresh, effect_thresh) {
         u = n1; v = n2; arrow = '--';
       }
 
-      // call our Pillai test
       var res = pillai_test(u, v, other, df);
 
       if (res.effectSize > effect_thresh && res.pValue < pval_thresh){
@@ -159,7 +158,7 @@ function rmsea(dag, df) {
         // Convert back to an array of Vertex objects
         const Zunion = Object.values(ZbyId);
 
-        // 3c) Call your Pillai‐based CI test:
+	// Call pillai trace
         const res = pillai_test(vi, vj, Zunion, df);
         const pval = Math.max(res.pValue, 1e-40);
         pvalues.push(pval);
@@ -167,10 +166,9 @@ function rmsea(dag, df) {
     }
   }
 
-  // 4) Now compute Fisher’s C = -2 * sum(log(p_i))
+  // Compute Fisher's C
   const m = pvalues.length;
   if (m === 0) {
-    // If there were no non‐adjacent pairs at all (unlikely), return 0
     return 0;
   }
   let sumLog = 0;
@@ -178,12 +176,9 @@ function rmsea(dag, df) {
     sumLog += Math.log(pvalues[k]);
   }
   const fisherc = -2 * sumLog;
-
-  // 5) Compute sample size n (number of rows in df)
-  //    In Danfo.js, DataFrame.shape[0] is the row‐count.
   const n = df.shape[0];
 
-  // 6) RMSEA = sqrt( max( C − 2*m, 0 ) / [2 * m * (n − 1)] )
+  // RMSEA
   const numerator = Math.max(fisherc - 2 * m, 0);
   const denominator = 2 * m * (n - 1);
   const rmseaVal = Math.sqrt(numerator / denominator);

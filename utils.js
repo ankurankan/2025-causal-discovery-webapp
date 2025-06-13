@@ -1,8 +1,7 @@
 const dfd_readcsv = require('danfojs').readCSV;
 const CI = require('./ci_test');
 
-// expose to window so your DAGitty code can call them:
-// window.setup = setup;
+// Expose functions to window
 window.uploadFile = uploadFile;
 window.send = send;
 window.pillai_test    = CI.pillai_test;
@@ -11,7 +10,7 @@ window.onVarTypeConfirmed = onVarTypeConfirmed;
 window.rmsea = CI.rmsea;
 
 let data = null;
-let varTypes = {}; // will hold { varName: "continuous" or "categorical", ... }
+let varTypes = {};
 
 
 function getEdgeDOM( u , v, dir ){
@@ -49,25 +48,23 @@ async function uploadFile() {
   }
 
   try {
-    // (1) Read CSV into a Danfo.js DataFrame
+    // 1. Read CSV.
     const df = await dfd_readcsv(file);
     data = df;
 
-    // (2) Build the DAGitty “empty” graph just as before
+    // 2. Build the empty graph with variables in the CSV.
     const varNames = df.columns;
     const graph = document.getElementById('dagitty_graph');
     graph.innerHTML = "dag{ " + varNames.join(" ") + " }";
     DAGitty.setup();
 
-    // (3) Show the “Variable Type” panel (previously hidden)
+    // 3. Show a panel to choose variable type.
     const panel = document.getElementById('varTypePanel');
     panel.style.display = "block";
-
-    // (4) Populate #varTypeForm with one row per variable
     const form = document.getElementById('varTypeForm');
     form.innerHTML = ""; // clear any old content
 
-    varTypes = {}; // reset
+    varTypes = {};
 
     varNames.forEach(varName => {
       // Create a container <div> for each variable
@@ -96,28 +93,21 @@ async function uploadFile() {
       select.appendChild(optCont);
       select.appendChild(optCat);
 
-      // default selection: try an automatic guess
-      // (e.g. if the column’s dtype is “object” or string‐like, pick categorical)
-      // Danfo.js doesn’t give you dtype directly, but you can check a few rows:
+      // Try to make a default selection.
       const sampleVals = df[varName].values.slice(0, 10);
       const allNumericSample = sampleVals.every(v => typeof v === "number");
       select.value = allNumericSample ? "continuous" : "categorical";
 
-      // whenever user changes the dropdown, store it into varTypes:
+      // Store changes in varTypes.
       select.onchange = function() {
         varTypes[varName] = this.value;
       };
-
-      // initialize varTypes right away:
       varTypes[varName] = select.value;
 
       rowDiv.appendChild(label);
       rowDiv.appendChild(select);
       form.appendChild(rowDiv);
     });
-
-    // (5) Wire up graph‐change listener AFTER user confirms variable types
-    //     (we’ll do that in onVarTypeConfirmed())
   }
   catch (err) {
     console.error("Error parsing CSV into DataFrame:", err);
@@ -128,17 +118,12 @@ async function uploadFile() {
 
 // Called when the user clicks “OK” under the variable‐type form:
 function onVarTypeConfirmed() {
-  // (1) Hide the “Variable Type” panel once they’ve confirmed:
+  // Hide the “Variable Type” panel once they’ve confirmed:
   document.getElementById('varTypePanel').style.display = "none";
 
-  // (2) Now that varTypes is filled, we can allow the DAGitty graph to “send”:
   DAGitty.controllers[0].event_listeners["graphchange"][0] = send;
-
-  // (3) Immediately call send() once, so edges appear with the new types:
   send();
 }
-
-
 
 async function send(){
 	let g  = DAGitty.controllers[0].graph
