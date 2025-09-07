@@ -21,6 +21,9 @@ const EXAMPLE_DATASET_URLS = {
   example1: 'https://raw.githubusercontent.com/ankurankan/2025-causal-discovery-webapp/refs/heads/new_features/examples/mediator.csv', // TODO: set to full CSV URL
   example2: '', // TODO: set to full CSV URL
   example3: ''  // TODO: set to full CSV URL
+  example4: '',
+  example5: '',
+  example6: ''
 };
 
 // Ensure a status element exists (created lazily)

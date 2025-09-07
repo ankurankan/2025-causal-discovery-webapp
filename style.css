@@ -147,6 +147,15 @@ button:hover {
         padding: 2px 4px;
 }
 
+.example-dataset-label {
+        font-size: 11px;
+        font-family: sans-serif;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+}
+
 /* Centered modal styling for variable type panel */
 #varTypePanel {
         position: fixed;

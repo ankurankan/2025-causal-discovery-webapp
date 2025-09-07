@@ -13,7 +13,7 @@
 
 <table class="center" id='parameters'>
 	<tr>
-		<th class="table_head"> Dataset </th>
+		<th class="table_head"> Choose Dataset </th>
 		<th class="table_head"> Association Threshold </th>
 		<th class="table_head"> p-value Threshold </th>
 		<th class="table_head"> RMSEA </th>
@@ -23,11 +23,15 @@
 		<td> 
 			<form id="uploadForm" style="display:flex;flex-direction:column;gap:6px;align-items:center;">
 			    <input type="file" id="fileInput" name="file">
+			    <div class="example-dataset-label"> Example datasets</div>
 			    <select id="example_dataset_select" style="width:180px;" onchange="if(this.value){loadExampleDataset(this.value)}">
-			    	<option value="">-- Example dataset --</option>
-			    	<option value="example1">Example 1</option>
-			    	<option value="example2">Example 2</option>
-			    	<option value="example3">Example 3</option>
+			    	<option value="">-- Example dataset --</option>	
+			    	<option value="example1">M-Bias</option>
+			    	<option value="example2">Mediator</option>
+			    	<option value="example3">Asia</option>
+			    	<option value="example4">Cancer</option>
+			    	<option value="example5">Alarm</option>
+			    	<option value="example6">Ecoli70</option>
 			    </select>
 			</form>
 		</td>
