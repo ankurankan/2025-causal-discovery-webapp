@@ -14,6 +14,29 @@ window.rmsea = CI.rmsea;
 let data = null;
 let varTypes = {}; // will hold { varName: "continuous" or "categorical", ... }
 
+// Ensure a status element exists (created lazily)
+function setComputingStatus(active){
+  let el = document.getElementById('computing_status');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'computing_status';
+    el.style.margin = '8px auto';
+    el.style.textAlign = 'center';
+    el.style.fontFamily = 'sans-serif';
+    el.style.fontSize = '14px';
+    el.style.fontWeight = '600';
+    el.style.color = '#555';
+    // insert just above the graph if possible
+    const graph = document.getElementById('dagitty_graph');
+    if(graph && graph.parentNode){
+      graph.parentNode.insertBefore(el, graph);
+    } else {
+      document.body.appendChild(el);
+    }
+  }
+  el.textContent = active ? 'Computing…' : '';
+}
+
 
 function getEdgeDOM( u , v, dir ){
 	let ekv = DAGitty.controllers[0].getView().edge_shapes.kv;
@@ -148,15 +171,6 @@ async function send(){
 	// remove all undirected edges
 	g = dagOnly(g)
 
-	// send DAG to backend for testing
-	// const a = await fetch('http://127.0.0.1:8000/getassoc?dag='+encodeURIComponent(g.toString())+'&threshold='+document.getElementById('thres_txt').value+'&pval='+document.getElementById('pval_txt').value)
-	// const b = await a.json()
-	//
-
-	// const fisher = await fetch('http://127.0.0.1:8000/rmsea?dag='+encodeURIComponent(g.toString()))
-	// const pval = await fisher.json()
-	// document.getElementById('fisherc').innerHTML = 0;
-
 	const effect_thresh = document.getElementById('thres_txt').value;
 	const pval_thresh = document.getElementById('pval_txt').value;
 
@@ -164,6 +178,9 @@ async function send(){
   let ciMethodSel = document.getElementById('ci_test_select');
   let ci_method = ciMethodSel ? ciMethodSel.value : 'pillai_trace';
 
+  // Show status before heavy synchronous work; yield to render cycle
+  setComputingStatus(true);
+  await new Promise(r => setTimeout(r,0));
   effects = compute_effects( g, data, pval_thresh, effect_thresh, ci_method );
 	if( Array.isArray(effects) ){
 		for( let e of effects ){
@@ -199,5 +216,6 @@ async function send(){
 		}
 	}
 	DAGitty.controllers[0].event_listeners["graphchange"][0] = send
+  setComputingStatus(false);
 }
 
