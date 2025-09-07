@@ -31,21 +31,15 @@ function setComputingStatus(active){
   if(!el){
     el = document.createElement('div');
     el.id = 'computing_status';
-    // Prefer placing inside the dagitty graph container so absolute centering works
     const graph = document.getElementById('dagitty_graph');
-    if(graph){
-      graph.appendChild(el);
-    } else {
-      document.body.appendChild(el);
-    }
+    (graph || document.body).appendChild(el);
   }
   if(active){
     el.textContent = 'Computing…';
-    el.style.display = 'flex';
-    requestAnimationFrame(()=>{ el.classList.add('show'); });
+    if(el.style.display !== 'block') el.style.display = 'block';
+    requestAnimationFrame(()=> el.classList.add('show'));
   } else {
     el.classList.remove('show');
-    // after transition hide
     setTimeout(()=>{ if(!el.classList.contains('show')) el.style.display='none'; }, 200);
   }
 }
@@ -163,7 +157,7 @@ async function uploadFile() {
     // (3) Show the “Variable Type” panel (previously hidden)
   const panel = document.getElementById('varTypePanel');
   const backdrop = document.getElementById('varTypeBackdrop');
-  panel.style.display = "block";
+  panel.style.display = 'block';
   if(backdrop) backdrop.style.display = 'block';
 
     // (4) Populate #varTypeForm with one row per variable
@@ -233,7 +227,7 @@ function onVarTypeConfirmed() {
   // (1) Hide the “Variable Type” panel once they’ve confirmed:
   const panel = document.getElementById('varTypePanel');
   const backdrop = document.getElementById('varTypeBackdrop');
-  panel.style.display = "none";
+  panel.style.display = 'none';
   if(backdrop) backdrop.style.display = 'none';
 
   // (2) Now that varTypes is filled, we can allow the DAGitty graph to “send”:
