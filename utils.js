@@ -73,15 +73,50 @@ async function uploadFile() {
   }
 
   try {
+    // Clear our globals (data will be set below)
+    varTypes = {};
+
     // (1) Read CSV into a Danfo.js DataFrame
     const df = await dfd_readcsv(file);
     data = df;
 
     // (2) Build the DAGitty “empty” graph just as before
     const varNames = df.columns;
-    const graph = document.getElementById('dagitty_graph');
-    graph.innerHTML = "dag{ " + varNames.join(" ") + " }";
-    DAGitty.setup();
+    const spec = "dag{ " + varNames.join(" ") + " }";
+
+    // Helper to (re)load dagitty script fresh each upload to avoid stale controllers
+    async function loadDagittyFresh(specStr){
+      const graphEl = document.getElementById('dagitty_graph');
+      // Replace node to drop old listeners
+      const fresh = graphEl.cloneNode(false);
+      fresh.id = 'dagitty_graph';
+      graphEl.parentNode.replaceChild(fresh, graphEl);
+      fresh.setAttribute('data-mutable','true');
+      fresh.classList.add('dagitty');
+      fresh.innerHTML = specStr;
+
+      // Remove previous dagitty script tags (if any)
+      document.querySelectorAll('script[src*="dagitty-3.0"]').forEach(s => s.remove());
+      // Reset controllers if object exists
+      if (window.DAGitty && DAGitty.controllers) {
+        try { DAGitty.controllers.length = 0; } catch(_) {}
+      }
+      await new Promise(r=>setTimeout(r,0));
+      await new Promise((resolve,reject)=>{
+        const sc = document.createElement('script');
+        sc.src = 'https://dagitty.net/lib/dagitty-3.0.js?reload=' + Date.now();
+        sc.onload = ()=>{ try { DAGitty.setup(); resolve(); } catch(e){ reject(e);} };
+        sc.onerror = reject;
+        document.head.appendChild(sc);
+      });
+      if (!(DAGitty.controllers && DAGitty.controllers[0])) {
+        console.warn('[uploadFile] DAGitty controller still missing after script reload');
+      } else {
+        console.log('[uploadFile] Graph initialized with', varNames.length, 'variables');
+      }
+    }
+
+    await loadDagittyFresh(spec);
 
     // (3) Show the “Variable Type” panel (previously hidden)
     const panel = document.getElementById('varTypePanel');
@@ -156,7 +191,9 @@ function onVarTypeConfirmed() {
   document.getElementById('varTypePanel').style.display = "none";
 
   // (2) Now that varTypes is filled, we can allow the DAGitty graph to “send”:
-  DAGitty.controllers[0].event_listeners["graphchange"][0] = send;
+  if (DAGitty.controllers && DAGitty.controllers[0]) {
+    DAGitty.controllers[0].event_listeners["graphchange"][0] = send;
+  }
 
   // (3) Immediately call send() once, so edges appear with the new types:
   send();
@@ -165,8 +202,13 @@ function onVarTypeConfirmed() {
 
 
 async function send(){
-	let g  = DAGitty.controllers[0].graph
-	DAGitty.controllers[0].event_listeners["graphchange"] = []
+  if (!DAGitty.controllers || !DAGitty.controllers[0]) {
+    console.warn('[send] No controller; abort');
+    return;
+  }
+  const controller = DAGitty.controllers[0];
+  let g  = controller.graph;
+  controller.event_listeners["graphchange"] = []
 
 	// remove all undirected edges
 	g = dagOnly(g)
@@ -195,8 +237,8 @@ async function send(){
 	const rmsea_val = rmsea( g, data);
 	document.getElementById('rmsea').innerHTML = rmsea_val.toFixed(3);
 
-	DAGitty.controllers[0].setGraph( g )
-	DAGitty.controllers[0].redraw() // creates new edge shapes*/
+  controller.setGraph( g )
+  controller.redraw() // creates new edge shapes*/
 	//return
 	for( let e of effects ){
 		let edom = getEdgeDOM( e.X, e.Y, 0+e.edge )
@@ -215,7 +257,7 @@ async function send(){
 			console.log( e )
 		}
 	}
-	DAGitty.controllers[0].event_listeners["graphchange"][0] = send
+  controller.event_listeners["graphchange"][0] = send
   setComputingStatus(false);
 }
 
