@@ -29,12 +29,6 @@ function setComputingStatus(active){
   if(!el){
     el = document.createElement('div');
     el.id = 'computing_status';
-    el.style.margin = '8px auto';
-    el.style.textAlign = 'center';
-    el.style.fontFamily = 'sans-serif';
-    el.style.fontSize = '14px';
-    el.style.fontWeight = '600';
-    el.style.color = '#555';
     // insert just above the graph if possible
     const graph = document.getElementById('dagitty_graph');
     if(graph && graph.parentNode){
@@ -157,8 +151,10 @@ async function uploadFile() {
     await loadDagittyFresh(spec);
 
     // (3) Show the “Variable Type” panel (previously hidden)
-    const panel = document.getElementById('varTypePanel');
-    panel.style.display = "block";
+  const panel = document.getElementById('varTypePanel');
+  const backdrop = document.getElementById('varTypeBackdrop');
+  panel.style.display = "block";
+  if(backdrop) backdrop.style.display = 'block';
 
     // (4) Populate #varTypeForm with one row per variable
     const form = document.getElementById('varTypeForm');
@@ -169,13 +165,12 @@ async function uploadFile() {
     varNames.forEach(varName => {
       // Create a container <div> for each variable
       const rowDiv = document.createElement('div');
-      rowDiv.style.marginBottom = "0.5em";
+      rowDiv.className = 'var-type-row';
 
       //  a) label
       const label = document.createElement('label');
-      label.textContent = varName + ": ";
+      label.textContent = varName + ":"; // colon kept, spacing handled by CSS gap
       label.setAttribute("for", "type_of_" + varName);
-      label.style.marginRight = "0.5em";
 
       //  b) <select> element
       const select = document.createElement('select');
@@ -208,8 +203,8 @@ async function uploadFile() {
       // initialize varTypes right away:
       varTypes[varName] = select.value;
 
-      rowDiv.appendChild(label);
-      rowDiv.appendChild(select);
+  rowDiv.appendChild(label);
+  rowDiv.appendChild(select);
       form.appendChild(rowDiv);
     });
 
@@ -226,7 +221,10 @@ async function uploadFile() {
 // Called when the user clicks “OK” under the variable‐type form:
 function onVarTypeConfirmed() {
   // (1) Hide the “Variable Type” panel once they’ve confirmed:
-  document.getElementById('varTypePanel').style.display = "none";
+  const panel = document.getElementById('varTypePanel');
+  const backdrop = document.getElementById('varTypeBackdrop');
+  panel.style.display = "none";
+  if(backdrop) backdrop.style.display = 'none';
 
   // (2) Now that varTypes is filled, we can allow the DAGitty graph to “send”:
   if (DAGitty.controllers && DAGitty.controllers[0]) {
