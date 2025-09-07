@@ -269,24 +269,25 @@ async function send(){
   // Show status before heavy synchronous work; yield to render cycle
   setComputingStatus(true);
   await new Promise(r => setTimeout(r,0));
-  effects = compute_effects( g, data, pval_thresh, effect_thresh, ci_method );
-	if( Array.isArray(effects) ){
-		for( let e of effects ){
-			e.edge = e.A == "->"
-			if( !e.edge ){
-				g.addEdge( e.X, e.Y, Graph.Edgetype.Undirected )
-			}
-		}
-	} else {
-		return
-	}
-	const rmsea_val = rmsea( g, data);
-	document.getElementById('rmsea').innerHTML = rmsea_val.toFixed(3);
+  const result = compute_effects( g, data, pval_thresh, effect_thresh, ci_method );
+  if(!result || !result.edges){
+    console.warn('[send] compute_effects returned unexpected structure', result);
+    setComputingStatus(false);
+    return;
+  }
+  const effects = result.edges;
+  for( let e of effects ){
+    e.edge = e.A == "->";
+    if( !e.edge ){
+      g.addEdge( e.X, e.Y, Graph.Edgetype.Undirected );
+    }
+  }
+  document.getElementById('rmsea').innerHTML = (result.rmsea || 0).toFixed(3);
 
   controller.setGraph( g )
   controller.redraw() // creates new edge shapes*/
 	//return
-	for( let e of effects ){
+  for( let e of effects ){
 		let edom = getEdgeDOM( e.X, e.Y, 0+e.edge )
 		if( !edom && e.edge ){
 			edom = getEdgeDOM( e.v, e.u, 0+e.edge )
