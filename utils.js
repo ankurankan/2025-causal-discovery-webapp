@@ -288,7 +288,7 @@ async function send(){
 
 		}
 		if( edom ){
-			edom.style.strokeWidth = 5*parseFloat(e.cor)
+			edom.style.strokeWidth = parseFloat(e.cor)
 			if( e.edge ){
 				edom.setAttribute("stroke", "#0A0")
 			} else {
