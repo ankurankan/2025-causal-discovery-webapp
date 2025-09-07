@@ -29,15 +29,23 @@ function setComputingStatus(active){
   if(!el){
     el = document.createElement('div');
     el.id = 'computing_status';
-    // insert just above the graph if possible
+    // Prefer placing inside the dagitty graph container so absolute centering works
     const graph = document.getElementById('dagitty_graph');
-    if(graph && graph.parentNode){
-      graph.parentNode.insertBefore(el, graph);
+    if(graph){
+      graph.appendChild(el);
     } else {
       document.body.appendChild(el);
     }
   }
-  el.textContent = active ? 'Computing…' : '';
+  if(active){
+    el.textContent = 'Computing…';
+    el.style.display = 'flex';
+    requestAnimationFrame(()=>{ el.classList.add('show'); });
+  } else {
+    el.classList.remove('show');
+    // after transition hide
+    setTimeout(()=>{ if(!el.classList.contains('show')) el.style.display='none'; }, 200);
+  }
 }
 
 // Fetch an example dataset by key, expecting EXAMPLE_DATASET_URLS to hold a URL.
