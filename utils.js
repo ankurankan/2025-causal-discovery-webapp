@@ -10,9 +10,18 @@ window.pearsonr = CI.pearsonr;
 window.compute_effects = CI.compute_effects;
 window.onVarTypeConfirmed = onVarTypeConfirmed;
 window.rmsea = CI.rmsea;
+window.loadExampleDataset = loadExampleDataset;
 
 let data = null;
 let varTypes = {}; // will hold { varName: "continuous" or "categorical", ... }
+
+// Placeholder mapping for future example dataset URLs; to be filled later by user.
+// Keys must match values used in #example_dataset_select options.
+const EXAMPLE_DATASET_URLS = {
+  example1: 'https://raw.githubusercontent.com/ankurankan/2025-causal-discovery-webapp/refs/heads/new_features/examples/mediator.csv', // TODO: set to full CSV URL
+  example2: '', // TODO: set to full CSV URL
+  example3: ''  // TODO: set to full CSV URL
+};
 
 // Ensure a status element exists (created lazily)
 function setComputingStatus(active){
@@ -35,6 +44,35 @@ function setComputingStatus(active){
     }
   }
   el.textContent = active ? 'Computing…' : '';
+}
+
+// Fetch an example dataset by key, expecting EXAMPLE_DATASET_URLS to hold a URL.
+async function loadExampleDataset(key){
+  if(!key){ return; }
+  const url = EXAMPLE_DATASET_URLS[key];
+  if(!url){
+    alert('No URL configured yet for ' + key + '. Please provide one.');
+    return;
+  }
+  try {
+    setComputingStatus(true);
+    const resp = await fetch(url + (url.includes('?') ? '&' : '?') + 't=' + Date.now());
+    if(!resp.ok){ throw new Error('HTTP '+resp.status); }
+    const csvText = await resp.text();
+    const nameGuess = key + '.csv';
+    const blob = new Blob([csvText], {type:'text/csv'});
+    const file = new File([blob], nameGuess, {type:'text/csv'});
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    const fileInput = document.getElementById('fileInput');
+    if(fileInput){ fileInput.files = dt.files; }
+    await uploadFile();
+  } catch(err){
+    console.error('Failed to load example dataset', key, err);
+    alert('Could not load example dataset: ' + key + '\n' + err.message);
+  } finally {
+    setComputingStatus(false);
+  }
 }
 
 

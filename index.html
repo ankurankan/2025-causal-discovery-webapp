@@ -21,9 +21,15 @@
 	</tr>
 	<tr>
 		<td> 
-    			<form id="uploadForm">
-    			    <input type="file" id="fileInput" name="file">
-    			</form>
+			<form id="uploadForm" style="display:flex;flex-direction:column;gap:6px;align-items:center;">
+			    <input type="file" id="fileInput" name="file">
+			    <select id="example_dataset_select" style="width:180px;" onchange="if(this.value){loadExampleDataset(this.value)}">
+			    	<option value="">-- Example dataset --</option>
+			    	<option value="example1">Example 1</option>
+			    	<option value="example2">Example 2</option>
+			    	<option value="example3">Example 3</option>
+			    </select>
+			</form>
 		</td>
 		<td> <input type="number" id="thres_txt" value=0.05 onchange="send()" oninput="document.getElementById('thres_slide').value=this.value"> </td>
 		<td> <input type="number" id="pval_txt" value=0.05 onchange="send()" oninput="document.getElementById('pval_slide').value=this.value"> </td>
@@ -44,8 +50,7 @@
 	</tr>
 	<tr class='description_row'>
 		<td class='description_txt'> Select the dataset (csv) file </td>
-		<td class='description_txt'> Association threshold for effect size. </td>
-		<td class='description_txt'> p-value threshold for statistical significance. </td>
+		<td colspan="2" class='description_txt'> Thresholds to decide whether to show a potential edge. Increasing association threshold would reduce and increasing p-value threshold would increase the number of suggested edges. </td>
 		<td class='description_txt'> Root Mean Square Error of Approximation (RMSEA) for overall fit. </td>
 		<td class='description_txt'> Conditional independence test: RF-based Pillai trace vs linear Pearson residual. </td>
 	</tr>
