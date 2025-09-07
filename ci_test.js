@@ -4,6 +4,8 @@ var RF = require('ml-random-forest').RandomForestRegression;
 var Matrix = require('ml-matrix').Matrix;
 var canonicalCorrelations = require('./cancor').canonicalCorrelations;
 var jStat = require('jstat');
+// Linear (Pearson residual) CI test
+var pearsonr = require('./pearson').pearsonr;
 
 /**
  * Fit RFs, compute residuals, canonical corrs, Pillai effect & p-value.
@@ -69,7 +71,6 @@ function pillai_test(X, Y, Z, df) {
   var fstat = (coef/df1) * (df2/(smin - coef));
   var pval  = 1 - jStat.centralF.cdf(fstat, df1, df2);
 
-  console.log("X=", X.id, "Y=", Y.id, "Z=", Z.map(zName => zName.id), "coef=", coef, "pval=", pval);
   return {
     effectSize: coef,
     pValue: pval
@@ -77,7 +78,17 @@ function pillai_test(X, Y, Z, df) {
 }
 
 
-function compute_effects(dag, df, pval_thresh, effect_thresh) {
+function compute_effects(dag, df, pval_thresh, effect_thresh, ci_method) {
+  // Default method if not provided
+  ci_method = ci_method || 'pillai_trace';
+
+  // choose test function
+  var testFn;
+  if (ci_method === 'pearsonr') {
+    testFn = pearsonr;
+  } else { // fallback to pillai trace
+    testFn = pillai_test;
+  }
   var verts = dag.getVertices();
   var out = [];
 
@@ -108,8 +119,11 @@ function compute_effects(dag, df, pval_thresh, effect_thresh) {
         u = n1; v = n2; arrow = '--';
       }
 
-      // call our Pillai test
-      var res = pillai_test(u, v, other, df);
+      // call selected CI test
+      var res = testFn(u, v, other, df);
+
+      // unified debug log (method + variables)
+      console.log('[CI]', ci_method, 'X=', u.id, 'Y=', v.id, 'Z=', other.map(function(z){return z.id;}), 'effect=', res.effectSize, 'pval=', res.pValue);
 
       if (res.effectSize > effect_thresh && res.pValue < pval_thresh){
       	out.push({
@@ -196,5 +210,6 @@ function rmsea(dag, df) {
 module.exports = {
   rmsea: rmsea,
   pillai_test:    pillai_test,
+  pearsonr: pearsonr,
   compute_effects: compute_effects
 };

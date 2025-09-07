@@ -6,6 +6,7 @@ const CI = require('./ci_test');
 window.uploadFile = uploadFile;
 window.send = send;
 window.pillai_test    = CI.pillai_test;
+window.pearsonr = CI.pearsonr;
 window.compute_effects = CI.compute_effects;
 window.onVarTypeConfirmed = onVarTypeConfirmed;
 window.rmsea = CI.rmsea;
@@ -159,7 +160,11 @@ async function send(){
 	const effect_thresh = document.getElementById('thres_txt').value;
 	const pval_thresh = document.getElementById('pval_txt').value;
 
-	effects = compute_effects( g, data, pval_thresh, effect_thresh );
+  // Determine selected CI method from dropdown (if present)
+  let ciMethodSel = document.getElementById('ci_test_select');
+  let ci_method = ciMethodSel ? ciMethodSel.value : 'pillai_trace';
+
+  effects = compute_effects( g, data, pval_thresh, effect_thresh, ci_method );
 	if( Array.isArray(effects) ){
 		for( let e of effects ){
 			e.edge = e.A == "->"
