@@ -13,14 +13,14 @@ window.rmsea = CI.rmsea;
 window.loadExampleDataset = loadExampleDataset;
 
 let data = null;
-let varTypes = {}; // will hold { varName: "continuous" or "categorical", ... }
+let varTypes = {}; 
 
 // Placeholder mapping for future example dataset URLs; to be filled later by user.
 // Keys must match values used in #example_dataset_select options.
 const EXAMPLE_DATASET_URLS = {
   example1: 'https://raw.githubusercontent.com/ankurankan/2025-causal-discovery-webapp/refs/heads/new_features/examples/mediator.csv', // TODO: set to full CSV URL
   example2: '', // TODO: set to full CSV URL
-  example3: ''  // TODO: set to full CSV URL
+  example3: '',  // TODO: set to full CSV URL
   example4: '',
   example5: '',
   example6: ''
